@@ -5,6 +5,6 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
-    base: "/sales/", // IMPORTANTÍSIMO para GitHub Pages
+    base: "/sales/",
   },
 });
