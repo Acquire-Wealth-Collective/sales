@@ -1,6 +1,7 @@
 {
   "name": "sales-billing-calculator",
   "private": true,
+  "homepage": "https://Acquire-Wealth-Collective.github.io/sales",
   "sideEffects": false,
   "type": "module",
   "scripts": {
