@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { KpiCard } from "@/components/KpiCard";
 import { YearChips } from "@/components/MultiYearSelect";
+import { StatusBadge } from "@/components/pipeline/StatusBadge";
 import { useLeadsStore } from "@/store/leadsStore";
 import { useEngagementsStore } from "@/store/engagementsStore";
 import { AddEngagementDialog } from "@/components/profile/AddEngagementDialog";
@@ -59,25 +60,27 @@ export function ProfilePage({ id }: { id: string }) {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-      {/* Top bar */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/pipeline" })}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex gap-2">
-            <Button className="bg-orange hover:bg-orange/90 text-orange-foreground shadow-elevated" onClick={() => setOpenEng(true)}>
-              <Plus className="mr-1.5 h-4 w-4" /> New Engagement
-            </Button>
-            <Button variant="outline" onClick={() => setOpenEdit(true)}>
-              <Pencil className="mr-1.5 h-4 w-4" /> Edit Client
-            </Button>
-          </div>
-        </div>
-        <div className="text-right">
+      {/* Top actions */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/pipeline" })}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <Button className="bg-orange hover:bg-orange/90 text-orange-foreground shadow-elevated" onClick={() => setOpenEng(true)}>
+          <Plus className="mr-1.5 h-4 w-4" /> New Engagement
+        </Button>
+        <Button variant="outline" onClick={() => setOpenEdit(true)}>
+          <Pencil className="mr-1.5 h-4 w-4" /> Edit Client
+        </Button>
+      </div>
+
+      <div className="rounded-[18px] border border-[#e2e8f0] bg-white p-6 sm:p-7 shadow-[0_2px_8px_rgba(0,0,0,0.05)] mb-5 flex flex-wrap items-start justify-between gap-5">
+        <div className="min-w-[280px]">
           <p className="text-xs font-semibold uppercase tracking-widest text-cyan">Client</p>
           <h1 className="text-2xl font-bold text-navy">{lead.fullName}</h1>
           <p className="text-sm text-muted-foreground">{lead.company}</p>
+          <div className="mt-3">
+            <StatusBadge status={lead.status} />
+          </div>
         </div>
       </div>
 
