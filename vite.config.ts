@@ -4,4 +4,7 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+  vite: {
+    base: "/sales/",
+  },
 });
