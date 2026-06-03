@@ -8,6 +8,7 @@ const queryClient = new QueryClient();
 export const router = createRouter({
   routeTree,
   context: { queryClient },
+  basepath: "/sales",
   scrollRestoration: true,
   defaultPreloadStaleTime: 0,
 });
