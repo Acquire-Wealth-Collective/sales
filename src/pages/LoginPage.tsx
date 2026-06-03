@@ -60,7 +60,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen overflow-hidden" style={{ background: "#143c4f" }}>
+    <div className="relative flex min-h-screen overflow-hidden" style={{ background: "#0D1B2A" }}>
       {/* Background decorative elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div

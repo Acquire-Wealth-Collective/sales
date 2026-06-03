@@ -88,25 +88,25 @@
 
   /* Light mode — Neutral Blue palette */
   --background: #FCFFF5;
-  --foreground: #193441;
+  --foreground: #0D1B2A;
 
   --card: #ffffff;
-  --card-foreground: #193441;
+  --card-foreground: #0D1B2A;
 
   --popover: #ffffff;
-  --popover-foreground: #193441;
+  --popover-foreground: #0D1B2A;
 
   --primary: #3E606F;
   --primary-foreground: #FCFFF5;
 
   --secondary: #D1DBBD;
-  --secondary-foreground: #193441;
+  --secondary-foreground: #0D1B2A;
 
   --muted: #D1DBBD;
   --muted-foreground: #3E606F;
 
   --accent: #e8ede0;
-  --accent-foreground: #193441;
+  --accent-foreground: #0D1B2A;
 
   --destructive: oklch(0.60 0.22 25);
   --destructive-foreground: #FCFFF5;
@@ -125,7 +125,7 @@
   --logo: #91AA9D;
 
   --sidebar: #FCFFF5;
-  --sidebar-foreground: #193441;
+  --sidebar-foreground: #0D1B2A;
   --sidebar-primary: #3E606F;
   --sidebar-accent: #D1DBBD;
   --sidebar-border: rgba(145, 170, 157, 0.35);
