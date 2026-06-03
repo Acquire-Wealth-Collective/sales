@@ -36,7 +36,15 @@ export function LoginPage() {
     try {
       await login(parsed.data.username, parsed.data.password);
       toast.success("Welcome back", { description: parsed.data.username });
-      navigate({ to: "/" });
+      navigate({
+        to: "/",
+        search: {
+          clientName: undefined,
+          taxYears: undefined,
+          latestCalculation: undefined,
+          hasExistingCalculation: false,
+        },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -57,11 +65,15 @@ export function LoginPage() {
               <ShieldCheck className="h-5 w-5" style={{ color: "var(--logo)" }} />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-white/70">Secure access</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-white/70">
+                Secure access
+              </p>
               <h1 className="text-xl font-bold text-white">Sales Billing Calculator</h1>
             </div>
           </div>
-          <p className="mt-4 text-sm text-white/75">Sign in to your enterprise R&amp;D billing workspace.</p>
+          <p className="mt-4 text-sm text-white/75">
+            Sign in to your enterprise R&amp;D billing workspace.
+          </p>
         </div>
 
         <form onSubmit={submit} className="space-y-4 px-8 py-7">
@@ -98,7 +110,11 @@ export function LoginPage() {
             disabled={loading}
             className="w-full bg-orange text-orange-foreground hover:bg-orange/90 shadow-elevated"
           >
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
+            {loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <LogIn className="mr-2 h-4 w-4" />
+            )}
             {loading ? "Signing in..." : "Sign In"}
           </Button>
 

@@ -4,13 +4,23 @@ import { useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import type { LeadSource, SalesRep, TaxYear } from "@/types/crm";
@@ -18,7 +28,15 @@ import { useLeadsStore } from "@/store/leadsStore";
 import { MultiYearSelect } from "@/components/MultiYearSelect";
 import { ALL_TAX_YEARS } from "@/types/crm";
 
-const SOURCES: LeadSource[] = ["Referral", "Website", "Cold Call", "Conference", "LinkedIn", "Partner", "Other"];
+const SOURCES: LeadSource[] = [
+  "Referral",
+  "Website",
+  "Cold Call",
+  "Conference",
+  "LinkedIn",
+  "Partner",
+  "Other",
+];
 const REPS: SalesRep[] = ["David Kim", "James Carter", "Sarah Johnson", "Unassigned"];
 
 const schema = z.object({
@@ -26,15 +44,27 @@ const schema = z.object({
   company: z.string().trim().min(1, "Required").max(160),
   email: z.string().trim().email("Invalid email").max(255),
   phone: z.string().trim().min(7, "Invalid phone").max(40),
-  source: z.enum(["Referral", "Website", "Cold Call", "Conference", "LinkedIn", "Partner", "Other"]),
+  source: z.enum([
+    "Referral",
+    "Website",
+    "Cold Call",
+    "Conference",
+    "LinkedIn",
+    "Partner",
+    "Other",
+  ]),
   rep: z.enum(["David Kim", "James Carter", "Sarah Johnson", "Unassigned"]),
 });
 
 type FormState = z.infer<typeof schema>;
 
 const initial: FormState = {
-  fullName: "", company: "", email: "", phone: "",
-  source: "Website", rep: "Unassigned",
+  fullName: "",
+  company: "",
+  email: "",
+  phone: "",
+  source: "Website",
+  rep: "Unassigned",
 };
 
 export function AddLeadDialog() {
@@ -59,8 +89,10 @@ export function AddLeadDialog() {
       setErrors(fe);
       return;
     }
-    addLead({ ...parsed.data, taxYears: years });
-    toast.success("Lead added", { description: `${parsed.data.fullName} · ${parsed.data.company}` });
+    addLead({ ...parsed.data, taxYears: years, entitiesCount: 0 });
+    toast.success("Lead added", {
+      description: `${parsed.data.fullName} · ${parsed.data.company}`,
+    });
     setForm(initial);
     setYears([]);
     setErrors({});
@@ -82,34 +114,63 @@ export function AddLeadDialog() {
         <form onSubmit={submit} className="grid gap-4">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Full Name" error={errors.fullName}>
-              <Input value={form.fullName} onChange={(e) => set("fullName", e.target.value)} placeholder="Jane Doe" />
+              <Input
+                value={form.fullName}
+                onChange={(e) => set("fullName", e.target.value)}
+                placeholder="Jane Doe"
+              />
             </Field>
             <Field label="Company / Entity" error={errors.company}>
-              <Input value={form.company} onChange={(e) => set("company", e.target.value)} placeholder="Acme Inc." />
+              <Input
+                value={form.company}
+                onChange={(e) => set("company", e.target.value)}
+                placeholder="Acme Inc."
+              />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Email" error={errors.email}>
-              <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="jane@acme.com" />
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => set("email", e.target.value)}
+                placeholder="jane@acme.com"
+              />
             </Field>
             <Field label="Phone" error={errors.phone}>
-              <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="(555) 123-4567" />
+              <Input
+                value={form.phone}
+                onChange={(e) => set("phone", e.target.value)}
+                placeholder="(555) 123-4567"
+              />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Lead Source">
               <Select value={form.source} onValueChange={(v) => set("source", v as LeadSource)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {SOURCES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {SOURCES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </Field>
             <Field label="Assigned Sales Representative">
               <Select value={form.rep} onValueChange={(v) => set("rep", v as SalesRep)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {REPS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  {REPS.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </Field>
@@ -123,8 +184,12 @@ export function AddLeadDialog() {
             />
           </Field>
           <DialogFooter className="mt-2">
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" className="bg-navy text-navy-foreground hover:bg-navy/90">Add Lead</Button>
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" className="bg-orange text-white hover:bg-orange/90">
+              Add Lead
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -132,7 +197,15 @@ export function AddLeadDialog() {
   );
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <Label className="mb-1.5 block">{label}</Label>

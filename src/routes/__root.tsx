@@ -26,6 +26,12 @@ function NotFoundComponent() {
         <div className="mt-6">
           <Link
             to="/"
+            search={{
+              clientName: undefined,
+              taxYears: undefined,
+              latestCalculation: undefined,
+              hasExistingCalculation: false,
+            }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Go home
@@ -80,17 +86,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Sales Billing Calculator — R&D Tax Credit & Billing" },
-      { name: "description", content: "Enterprise R&D tax credit and billing CRM platform for multi-entity clients." },
+      {
+        name: "description",
+        content: "Enterprise R&D tax credit and billing CRM platform for multi-entity clients.",
+      },
       { property: "og:title", content: "Sales Billing Calculator" },
-      { property: "og:description", content: "Enterprise R&D tax credit and billing CRM platform." },
+      {
+        property: "og:description",
+        content: "Enterprise R&D tax credit and billing CRM platform.",
+      },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "Sales Billing Calculator" },
       { name: "twitter:card", content: "summary" },
       { name: "theme-color", content: "#00264A" },
     ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-    ],
+    links: [{ rel: "stylesheet", href: appCss }],
   }),
   shellComponent: RootShell,
   component: RootComponent,
