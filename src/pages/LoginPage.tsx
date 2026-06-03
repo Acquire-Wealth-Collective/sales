@@ -160,7 +160,7 @@ export function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter your username"
                 maxLength={60}
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/25 focus:border-orange/50 focus:ring-orange/20"
+                className="border-white/10 bg-white/5 text-white placeholder:text-white/25 focus:border-orange/60 focus:ring-orange/25"
               />
             </div>
 
@@ -176,7 +176,7 @@ export function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 maxLength={120}
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/25 focus:border-orange/50 focus:ring-orange/20"
+                className="border-white/10 bg-white/5 text-white placeholder:text-white/25 focus:border-orange/60 focus:ring-orange/25"
               />
             </div>
 

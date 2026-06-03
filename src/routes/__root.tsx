@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
 
@@ -79,11 +80,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { location } = useRouterState();
+  const isLoginPage = location.pathname === "/login" || location.pathname === "/sales/login";
 
   return (
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-background">
-        <AppHeader />
+        {!isLoginPage && <AppHeader />}
         <Outlet />
       </div>
       <Toaster richColors position="top-right" />
