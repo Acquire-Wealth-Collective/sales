@@ -5,7 +5,10 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       { title: "Sign In — Sales Billing Calculator" },
-      { name: "description", content: "Sign in to the enterprise R&D tax credit and billing workspace." },
+      {
+        name: "description",
+        content: "Sign in to the enterprise R&D tax credit and billing workspace.",
+      },
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
