@@ -1,7 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PipelinePage } from "@/pages/PipelinePage";
+import { useAuthStore } from "@/store/authStore";
 
 export const Route = createFileRoute("/pipeline")({
+  beforeLoad: () => {
+    if (!useAuthStore.getState().isAuthenticated) throw redirect({ to: "/login" });
+  },
   head: () => ({
     meta: [
       { title: "Client Pipeline — Sales Billing CRM" },

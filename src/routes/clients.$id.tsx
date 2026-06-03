@@ -1,7 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { ProfilePage } from "@/pages/ProfilePage";
+import { useAuthStore } from "@/store/authStore";
 
 export const Route = createFileRoute("/clients/$id")({
+  beforeLoad: () => {
+    if (!useAuthStore.getState().isAuthenticated) throw redirect({ to: "/login" });
+  },
   head: () => ({
     meta: [
       { title: "Client Profile — Sales Billing CRM" },

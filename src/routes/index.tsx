@@ -1,7 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { CalculatorPage } from "@/pages/CalculatorPage";
+import { useAuthStore } from "@/store/authStore";
 
 export const Route = createFileRoute("/")({
+  beforeLoad: () => {
+    if (!useAuthStore.getState().isAuthenticated) throw redirect({ to: "/login" });
+  },
   validateSearch: (search: Record<string, unknown>) => ({
     clientName: typeof search.clientName === "string" ? search.clientName : undefined,
     taxYears: typeof search.taxYears === "string" ? search.taxYears : undefined,

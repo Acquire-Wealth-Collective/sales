@@ -49,7 +49,7 @@ export function AppHeader() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-1">
-          {NAV.map((n) => {
+          {isAuthenticated && NAV.map((n) => {
             const active = isActive(n.to);
             const Icon = n.icon;
             return (
@@ -104,7 +104,7 @@ export function AppHeader() {
           </SheetTrigger>
           <SheetContent side="right" className="w-72 bg-navy text-white border-navy/30">
             <nav className="mt-8 flex flex-col gap-1">
-              {NAV.map((n) => {
+              {isAuthenticated && NAV.map((n) => {
                 const Icon = n.icon;
                 return (
                   <Link
