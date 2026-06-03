@@ -13,8 +13,8 @@ const schema = z.object({
   password: z.string().min(4, "Minimum 4 characters").max(120),
 });
 
-/* ── Particle network canvas ── */
-function ParticleCanvas() {
+/* ── Revenue Chart Streams canvas ── */
+function RevenueCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -24,102 +24,141 @@ function ParticleCanvas() {
     if (!ctx) return;
 
     let animId: number;
-    let mouse = { x: -9999, y: -9999 };
 
-    interface Particle {
-      x: number; y: number;
-      vx: number; vy: number;
-      r: number; opacity: number;
-    }
+    // Chart line config
+    const CHARTS = [
+      { baseY: 0.28, amp: 0.09, freq1: 0.018, freq2: 0.041, freq3: 0.007, color: "145,170,157", lineW: 1.5, speed: 1.0 },
+      { baseY: 0.52, amp: 0.07, freq1: 0.012, freq2: 0.033, freq3: 0.005, color: "209,219,189", lineW: 1.2, speed: 0.7 },
+      { baseY: 0.72, amp: 0.11, freq1: 0.022, freq2: 0.055, freq3: 0.009, color: "62,96,111",   lineW: 1.8, speed: 1.3 },
+      { baseY: 0.42, amp: 0.05, freq1: 0.030, freq2: 0.020, freq3: 0.011, color: "145,170,157", lineW: 0.8, speed: 0.5 },
+    ];
 
-    let particles: Particle[] = [];
-    const COUNT = 90;
-    const MAX_DIST = 140;
-    const MOUSE_DIST = 180;
+    // Scrolling Y-value buffers — one value per horizontal pixel
+    let bufs: Float32Array[] = [];
+    let t = 0;
 
     const resize = () => {
       canvas.width  = window.innerWidth;
       canvas.height = window.innerHeight;
+      bufs = CHARTS.map((c) => {
+        const buf = new Float32Array(canvas.width);
+        for (let x = 0; x < canvas.width; x++) {
+          buf[x] = c.baseY * canvas.height
+            + Math.sin(x * c.freq1) * c.amp * canvas.height
+            + Math.sin(x * c.freq2) * c.amp * 0.4 * canvas.height;
+        }
+        return buf;
+      });
     };
 
-    const init = () => {
-      particles = Array.from({ length: COUNT }, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
-        r: Math.random() * 1.8 + 0.8,
-        opacity: Math.random() * 0.5 + 0.3,
-      }));
-    };
+    // Smooth noise: sum of sine waves — mimics real revenue data movement
+    const nextY = (c: typeof CHARTS[0], t: number) =>
+      c.baseY * canvas.height
+      + Math.sin(t * c.freq1 * 40)  * c.amp * canvas.height
+      + Math.sin(t * c.freq2 * 18)  * c.amp * 0.45 * canvas.height
+      + Math.sin(t * c.freq3 * 110) * c.amp * 0.2  * canvas.height;
 
     const draw = () => {
+      t += 0.012;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      particles.forEach((p) => {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0 || p.x > canvas.width)  p.vx *= -1;
-        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-
-        // Subtle mouse repulsion
-        const mdx = p.x - mouse.x;
-        const mdy = p.y - mouse.y;
-        const md = Math.sqrt(mdx * mdx + mdy * mdy);
-        if (md < MOUSE_DIST) {
-          const force = (MOUSE_DIST - md) / MOUSE_DIST * 0.012;
-          p.vx += (mdx / md) * force;
-          p.vy += (mdy / md) * force;
-          const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-          if (speed > 1.2) { p.vx = (p.vx / speed) * 1.2; p.vy = (p.vy / speed) * 1.2; }
-        }
-      });
-
-      // Lines between close particles
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < MAX_DIST) {
-            const alpha = (1 - dist / MAX_DIST) * 0.25;
-            ctx.beginPath();
-            ctx.strokeStyle = `rgba(145,170,157,${alpha})`;
-            ctx.lineWidth = 0.6;
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.stroke();
-          }
-        }
+      /* ── Subtle grid ── */
+      const GRID = 55;
+      ctx.lineWidth = 0.5;
+      ctx.strokeStyle = "rgba(145,170,157,0.05)";
+      for (let x = 0; x < canvas.width; x += GRID) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += GRID) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
       }
 
-      // Dots
-      particles.forEach((p) => {
+      /* ── Horizontal tick labels (faint) ── */
+      ctx.font = "10px monospace";
+      ctx.fillStyle = "rgba(145,170,157,0.12)";
+      for (let y = GRID; y < canvas.height; y += GRID) {
+        const label = `$${Math.round((canvas.height - y) / canvas.height * 2400)}K`;
+        ctx.fillText(label, 8, y - 3);
+      }
+
+      /* ── Scroll each buffer left, append new right-edge value ── */
+      CHARTS.forEach((c, i) => {
+        const buf = bufs[i];
+        buf.copyWithin(0, 1);                        // shift left
+        buf[buf.length - 1] = nextY(c, t * c.speed); // new value
+
+        const W = canvas.width;
+        const H = canvas.height;
+
+        /* Gradient fill under line */
+        const grad = ctx.createLinearGradient(0, c.baseY * H - c.amp * H, 0, H);
+        grad.addColorStop(0, `rgba(${c.color},0.12)`);
+        grad.addColorStop(0.6, `rgba(${c.color},0.04)`);
+        grad.addColorStop(1, `rgba(${c.color},0)`);
+
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(145,170,157,${p.opacity})`;
+        ctx.moveTo(0, H);
+        ctx.lineTo(0, buf[0]);
+        for (let x = 1; x < W - 1; x++) {
+          const mx = x + 0.5;
+          const my = (buf[x] + buf[x + 1]) / 2;
+          ctx.quadraticCurveTo(x, buf[x], mx, my);
+        }
+        ctx.lineTo(W, buf[W - 1]);
+        ctx.lineTo(W, H);
+        ctx.closePath();
+        ctx.fillStyle = grad;
         ctx.fill();
+
+        /* Line */
+        ctx.beginPath();
+        ctx.moveTo(0, buf[0]);
+        for (let x = 1; x < W - 1; x++) {
+          const mx = x + 0.5;
+          const my = (buf[x] + buf[x + 1]) / 2;
+          ctx.quadraticCurveTo(x, buf[x], mx, my);
+        }
+        ctx.lineTo(W, buf[W - 1]);
+        ctx.strokeStyle = `rgba(${c.color},0.55)`;
+        ctx.lineWidth = c.lineW;
+        ctx.stroke();
+
+        /* Glowing leading dot at right edge */
+        const ex = W - 1;
+        const ey = buf[W - 1];
+
+        const glow = ctx.createRadialGradient(ex, ey, 0, ex, ey, 12);
+        glow.addColorStop(0, `rgba(${c.color},0.7)`);
+        glow.addColorStop(1, `rgba(${c.color},0)`);
+        ctx.beginPath();
+        ctx.arc(ex, ey, 12, 0, Math.PI * 2);
+        ctx.fillStyle = glow;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(ex, ey, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${c.color},1)`;
+        ctx.fill();
+
+        /* Pulsing ring on leading dot */
+        const pulse = ((Math.sin(t * 3 + i * 1.5) + 1) / 2) * 8 + 4;
+        ctx.beginPath();
+        ctx.arc(ex, ey, pulse, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${c.color},${0.3 - pulse * 0.02})`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
       });
 
       animId = requestAnimationFrame(draw);
     };
 
-    const onMouseMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; };
-    const onMouseLeave = () => { mouse.x = -9999; mouse.y = -9999; };
-    const onResize = () => { resize(); init(); };
-
     resize();
-    init();
     draw();
 
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseleave", onMouseLeave);
+    const onResize = () => resize();
     window.addEventListener("resize", onResize);
-
     return () => {
       cancelAnimationFrame(animId);
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseleave", onMouseLeave);
       window.removeEventListener("resize", onResize);
     };
   }, []);
@@ -167,24 +206,23 @@ export function LoginPage() {
   return (
     <div className="relative flex min-h-screen overflow-hidden" style={{ background: "#0D1B2A" }}>
 
-      {/* Interactive particle canvas */}
-      <ParticleCanvas />
+      {/* Revenue chart streams */}
+      <RevenueCanvas />
 
-      {/* Ambient glow layers */}
+      {/* Ambient glow */}
       <div className="pointer-events-none absolute inset-0">
         <div
-          className="absolute -left-40 top-1/4 h-[600px] w-[600px] rounded-full opacity-20"
+          className="absolute -left-40 top-1/3 h-[500px] w-[500px] rounded-full opacity-15"
           style={{ background: "radial-gradient(circle, #1a3a5c 0%, transparent 70%)", filter: "blur(80px)" }}
         />
         <div
-          className="absolute right-0 top-0 h-[500px] w-[500px] rounded-full opacity-10"
+          className="absolute bottom-0 right-1/4 h-[400px] w-[600px] rounded-full opacity-10"
           style={{ background: "radial-gradient(circle, #3E606F 0%, transparent 70%)", filter: "blur(100px)" }}
         />
       </div>
 
-      {/* Left panel — branding */}
+      {/* Left panel */}
       <div className="relative z-10 hidden flex-col justify-between p-14 lg:flex lg:w-[58%]">
-        {/* Logo */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -195,14 +233,13 @@ export function LoginPage() {
             className="flex h-9 w-9 items-center justify-center rounded-lg"
             style={{ background: "rgba(145,170,157,0.1)", border: "1px solid rgba(145,170,157,0.2)" }}
           >
-            <span className="text-xs font-bold tracking-tight" style={{ color: "#91AA9D" }}>SB</span>
+            <span className="text-xs font-bold" style={{ color: "#91AA9D" }}>SB</span>
           </div>
           <span className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "rgba(145,170,157,0.55)" }}>
             Acquire Tax Credits
           </span>
         </motion.div>
 
-        {/* Headline */}
         <div className="max-w-xl">
           <motion.p
             initial={{ opacity: 0 }}
@@ -211,7 +248,7 @@ export function LoginPage() {
             className="mb-5 text-xs font-semibold uppercase tracking-[0.3em]"
             style={{ color: "#91AA9D" }}
           >
-            Enterprise Platform
+            Enterprise Sales Platform
           </motion.p>
 
           <motion.h1
@@ -238,7 +275,6 @@ export function LoginPage() {
             and engagement tracking in one secure workspace.
           </motion.p>
 
-          {/* Chips */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -274,7 +310,6 @@ export function LoginPage() {
 
       {/* Right panel — form */}
       <div className="relative z-10 flex flex-1 items-center justify-center p-8">
-        {/* Divider */}
         <div
           className="absolute bottom-0 left-0 top-0 hidden w-px lg:block"
           style={{
@@ -292,10 +327,10 @@ export function LoginPage() {
           <div
             className="rounded-2xl p-8"
             style={{
-              background: "rgba(13,27,42,0.75)",
+              background: "rgba(13,27,42,0.82)",
               border: "1px solid rgba(145,170,157,0.1)",
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
+              backdropFilter: "blur(28px)",
+              WebkitBackdropFilter: "blur(28px)",
             }}
           >
             <div className="mb-8">
@@ -323,11 +358,10 @@ export function LoginPage() {
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter your username"
                   maxLength={60}
-                  className="h-11 rounded-lg text-sm text-white placeholder:text-white/20 focus-visible:ring-1"
+                  className="h-11 rounded-lg text-sm text-white placeholder:text-white/20"
                   style={{
                     background: "rgba(255,255,255,0.04)",
                     border: "1px solid rgba(145,170,157,0.14)",
-                    outline: "none",
                   }}
                 />
               </div>
@@ -348,7 +382,7 @@ export function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   maxLength={120}
-                  className="h-11 rounded-lg text-sm text-white placeholder:text-white/20 focus-visible:ring-1"
+                  className="h-11 rounded-lg text-sm text-white placeholder:text-white/20"
                   style={{
                     background: "rgba(255,255,255,0.04)",
                     border: "1px solid rgba(145,170,157,0.14)",
