@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import { reportError } from "../lib/error-reporting";
 import { AppHeader } from "@/components/AppHeader";
 import { Toaster } from "@/components/ui/sonner";
+import { useThemeStore } from "@/store/themeStore";
 
 function NotFoundComponent() {
   return (
@@ -82,6 +83,11 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const { location } = useRouterState();
   const isLoginPage = location.pathname === "/login" || location.pathname === "/sales/login";
+  const theme = useThemeStore((s) => s.theme);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
 
   return (
     <QueryClientProvider client={queryClient}>

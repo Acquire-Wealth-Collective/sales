@@ -1,12 +1,13 @@
 // Sticky enterprise header — Deep Navy bar with active route states and mobile sheet nav.
 
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { Calculator, Users, LogIn, LogOut, Menu } from "lucide-react";
+import { Calculator, Users, LogIn, LogOut, Menu, Sun, Moon } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/authStore";
+import { useThemeStore } from "@/store/themeStore";
 
 const NAV = [
   { to: "/", label: "Sales Billing Calculator", icon: Calculator },
@@ -16,6 +17,7 @@ const NAV = [
 export function AppHeader() {
   const { location } = useRouterState();
   const { isAuthenticated, user, logout } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -72,6 +74,16 @@ export function AppHeader() {
               </Link>
             );
           })}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="ml-1 text-white/75 hover:bg-white/10 hover:text-white"
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
           {isAuthenticated ? (
             <Button
               type="button"
@@ -80,7 +92,7 @@ export function AppHeader() {
                 logout();
                 navigate({ to: "/login", search: {} });
               }}
-              className="ml-2 text-white/85 hover:bg-white/10 hover:text-white"
+              className="ml-1 text-white/85 hover:bg-white/10 hover:text-white"
             >
               <LogOut className="mr-1.5 h-4 w-4" />
               {user?.displayName ?? "Sign out"}
