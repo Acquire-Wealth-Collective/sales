@@ -60,22 +60,22 @@ export function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen overflow-hidden bg-[#09142A]">
+    <div className="relative flex min-h-screen overflow-hidden" style={{ background: "#193441" }}>
       {/* Background decorative elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div
-          className="absolute -right-40 -top-40 h-[500px] w-[500px] rounded-full opacity-[0.07]"
-          style={{ background: "radial-gradient(circle, #3B7DD8 0%, transparent 70%)" }}
+          className="absolute -right-40 -top-40 h-[500px] w-[500px] rounded-full opacity-[0.12]"
+          style={{ background: "radial-gradient(circle, #3E606F 0%, transparent 70%)" }}
         />
         <div
-          className="absolute -bottom-40 left-1/3 h-[600px] w-[600px] rounded-full opacity-[0.06]"
-          style={{ background: "radial-gradient(circle, #1E56A0 0%, transparent 70%)" }}
+          className="absolute -bottom-40 left-1/3 h-[600px] w-[600px] rounded-full opacity-[0.10]"
+          style={{ background: "radial-gradient(circle, #91AA9D 0%, transparent 70%)" }}
         />
         <div
-          className="absolute inset-0 opacity-[0.03]"
+          className="absolute inset-0 opacity-[0.04]"
           style={{
             backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)",
+              "linear-gradient(rgba(209,219,189,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(209,219,189,0.3) 1px, transparent 1px)",
             backgroundSize: "72px 72px",
           }}
         />
@@ -85,25 +85,26 @@ export function LoginPage() {
       <div className="relative hidden flex-col justify-between p-12 lg:flex lg:w-[55%]">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/20">
-            <span className="text-sm font-bold" style={{ color: "var(--orange)" }}>
-              SB
-            </span>
+          <div
+            className="flex h-10 w-10 items-center justify-center rounded-lg ring-1"
+            style={{ background: "rgba(145,170,157,0.15)", borderColor: "rgba(145,170,157,0.3)" }}
+          >
+            <span className="text-sm font-bold" style={{ color: "#91AA9D" }}>SB</span>
           </div>
-          <span className="text-sm font-semibold text-white/90">Sales Billing Calculator</span>
+          <span className="text-sm font-semibold" style={{ color: "#D1DBBD" }}>Sales Billing Calculator</span>
         </div>
 
         {/* Main copy */}
         <div className="max-w-lg">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-orange/80">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: "#91AA9D" }}>
             Acquire Tax Credits
           </p>
-          <h1 className="text-5xl font-bold leading-tight text-white">
+          <h1 className="text-5xl font-bold leading-tight" style={{ color: "#FCFFF5" }}>
             Enterprise R&D<br />
             Tax Credit &<br />
             Billing Platform
           </h1>
-          <p className="mt-6 text-lg leading-relaxed text-white/55">
+          <p className="mt-6 text-lg leading-relaxed" style={{ color: "#91AA9D" }}>
             Streamline your R&D tax credit calculations, client billing, and engagement tracking
             in one secure workspace built for modern sales teams.
           </p>
@@ -112,23 +113,29 @@ export function LoginPage() {
           <ul className="mt-10 space-y-4">
             {FEATURES.map((f) => (
               <li key={f} className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-orange/80" />
-                <span className="text-sm text-white/65">{f}</span>
+                <CheckCircle2 className="h-5 w-5 shrink-0" style={{ color: "#3E606F" }} />
+                <span className="text-sm" style={{ color: "#D1DBBD" }}>{f}</span>
               </li>
             ))}
           </ul>
         </div>
 
         {/* Footer */}
-        <p className="text-xs text-white/25">
+        <p className="text-xs" style={{ color: "rgba(145,170,157,0.4)" }}>
           © {new Date().getFullYear()} Acquire Tax Credits. All rights reserved.
         </p>
       </div>
 
       {/* Right panel — login form */}
-      <div className="relative flex flex-1 items-center justify-center p-6 lg:bg-white/[0.03]">
+      <div
+        className="relative flex flex-1 items-center justify-center p-6"
+        style={{ background: "rgba(62,96,111,0.12)" }}
+      >
         {/* Vertical divider */}
-        <div className="absolute bottom-0 left-0 top-0 hidden w-px bg-white/[0.07] lg:block" />
+        <div
+          className="absolute bottom-0 left-0 top-0 hidden w-px lg:block"
+          style={{ background: "rgba(145,170,157,0.15)" }}
+        />
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -138,11 +145,14 @@ export function LoginPage() {
         >
           {/* Card header */}
           <div className="mb-8">
-            <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20">
-              <ShieldCheck className="h-6 w-6 text-orange/90" />
+            <div
+              className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl ring-1"
+              style={{ background: "rgba(145,170,157,0.12)", borderColor: "rgba(145,170,157,0.25)" }}
+            >
+              <ShieldCheck className="h-6 w-6" style={{ color: "#91AA9D" }} />
             </div>
-            <h2 className="text-2xl font-bold text-white">Welcome back</h2>
-            <p className="mt-1 text-sm text-white/50">
+            <h2 className="text-2xl font-bold" style={{ color: "#FCFFF5" }}>Welcome back</h2>
+            <p className="mt-1 text-sm" style={{ color: "#91AA9D" }}>
               Sign in to your secure billing workspace.
             </p>
           </div>
@@ -150,7 +160,7 @@ export function LoginPage() {
           {/* Form */}
           <form onSubmit={submit} className="space-y-5">
             <div className="space-y-1.5">
-              <Label htmlFor="username" className="text-white/70">
+              <Label htmlFor="username" style={{ color: "#D1DBBD" }}>
                 Username
               </Label>
               <Input
@@ -160,12 +170,13 @@ export function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter your username"
                 maxLength={60}
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/25 focus:border-orange/60 focus:ring-orange/25"
+                className="text-white placeholder:text-white/25"
+                style={{ background: "rgba(145,170,157,0.08)", borderColor: "rgba(145,170,157,0.2)" }}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-white/70">
+              <Label htmlFor="password" style={{ color: "#D1DBBD" }}>
                 Password
               </Label>
               <Input
@@ -176,7 +187,8 @@ export function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 maxLength={120}
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/25 focus:border-orange/60 focus:ring-orange/25"
+                className="text-white placeholder:text-white/25"
+                style={{ background: "rgba(145,170,157,0.08)", borderColor: "rgba(145,170,157,0.2)" }}
               />
             </div>
 
@@ -189,7 +201,10 @@ export function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-orange text-white hover:bg-orange/90 shadow-elevated py-5 text-sm font-semibold"
+              className="w-full py-5 text-sm font-semibold text-white shadow-elevated"
+              style={{ background: "#3E606F" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#4a7285")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "#3E606F")}
             >
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -200,7 +215,7 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-[11px] text-white/25">
+          <p className="mt-6 text-center text-[11px]" style={{ color: "rgba(145,170,157,0.4)" }}>
             Azure AD / MSAL integration ready for production.
           </p>
         </motion.div>
