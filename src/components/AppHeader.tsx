@@ -1,4 +1,4 @@
-// Sticky enterprise header — Deep Navy bar with active route states and mobile sheet nav.
+﻿// Sticky enterprise header â€” Deep Navy bar with active route states and mobile sheet nav.
 
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { Calculator, Users, LogIn, LogOut, Menu, Sun, Moon } from "lucide-react";
@@ -10,7 +10,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useThemeStore } from "@/store/themeStore";
 
 const NAV = [
-  { to: "/", label: "AcquireIQ", icon: Calculator },
+  { to: "/", label: "Sales Billing Calculator", icon: Calculator },
   { to: "/pipeline", label: "Client Dashboard", icon: Users },
 ] as const;
 
