@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+﻿import { createFileRoute, redirect } from "@tanstack/react-router";
 import { CalculatorPage } from "@/pages/CalculatorPage";
 import { useAuthStore } from "@/store/authStore";
 
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/")({
   }),
   head: () => ({
     meta: [
-      { title: "R&D Billing Calculator — Sales Billing Platform" },
+      { title: "R&D Billing Calculator — AcquireIQ" },
       {
         name: "description",
         content: "Enterprise R&D tax credit and billing calculator for multi-entity clients.",

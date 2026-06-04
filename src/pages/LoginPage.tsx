@@ -175,7 +175,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     const parsed = schema.safeParse({ username, password });
@@ -233,10 +233,10 @@ export function LoginPage() {
             className="flex h-9 w-9 items-center justify-center rounded-lg"
             style={{ background: "rgba(145,170,157,0.1)", border: "1px solid rgba(145,170,157,0.2)" }}
           >
-            <span className="text-xs font-bold" style={{ color: "#91AA9D" }}>SB</span>
+            <span className="text-xs font-bold" style={{ color: "#91AA9D" }}>AQ</span>
           </div>
           <span className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "rgba(145,170,157,0.55)" }}>
-            Acquire Tax Credits
+            AcquireIQ
           </span>
         </motion.div>
 

@@ -10,7 +10,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useThemeStore } from "@/store/themeStore";
 
 const NAV = [
-  { to: "/", label: "Sales Billing Calculator", icon: Calculator },
+  { to: "/", label: "AcquireIQ", icon: Calculator },
   { to: "/pipeline", label: "Client Dashboard", icon: Users },
 ] as const;
 
@@ -40,11 +40,11 @@ export function AppHeader() {
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 backdrop-blur ring-1 ring-white/20 transition-transform group-hover:scale-105">
             <span className="text-sm font-bold tracking-tight" style={{ color: "var(--logo)" }}>
-              SB
+              AQ
             </span>
           </div>
           <div className="hidden sm:block leading-tight">
-            <p className="text-sm font-bold text-white">Sales Billing Calculator</p>
+            <p className="text-sm font-bold text-white">AcquireIQ</p>
             <p className="text-[11px] text-white/70">R&amp;D Tax Credit &amp; Billing</p>
           </div>
         </Link>
