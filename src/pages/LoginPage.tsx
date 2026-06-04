@@ -9,7 +9,7 @@ import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
 
 const schema = z.object({
-  username: z.string().trim().min(2, "Username too short").max(60),
+  username: z.string().trim().min(2, "Enter your username or email").max(120),
   password: z.string().min(4, "Minimum 4 characters").max(120),
 });
 
@@ -233,10 +233,10 @@ export function LoginPage() {
             className="flex h-9 w-9 items-center justify-center rounded-lg"
             style={{ background: "rgba(145,170,157,0.1)", border: "1px solid rgba(145,170,157,0.2)" }}
           >
-            <span className="text-xs font-bold" style={{ color: "#91AA9D" }}>AQ</span>
+            <span className="text-xs font-bold" style={{ color: "#91AA9D" }}>AS</span>
           </div>
           <span className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "rgba(145,170,157,0.55)" }}>
-            AcquireIQ
+            Acquire Sales
           </span>
         </motion.div>
 
@@ -349,14 +349,14 @@ export function LoginPage() {
                   className="text-[11px] font-semibold uppercase tracking-widest"
                   style={{ color: "rgba(209,219,189,0.5)" }}
                 >
-                  Username
+                  Username or Email
                 </label>
                 <Input
                   id="username"
                   autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username"
+                  placeholder="Username or email address"
                   maxLength={60}
                   className="h-11 rounded-lg text-sm text-white placeholder:text-white/20"
                   style={{

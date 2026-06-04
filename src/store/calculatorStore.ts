@@ -9,12 +9,12 @@ const newEntity = (i: number): Entity => ({
   companyName: "",
   state: "",
   employeeCount: "",
-  estimatedQRAs: "",
-  grossCredit: "",
-  w2Wages: "",
-  contractResearch: "",
-  supplies: "",
-  otherQualified: "",
+  filingStatus: "",
+  grossRevenue: "",
+  wagesOfficers: "",
+  wagesW2: "",
+  contractWages: "",
+  totalSupplies: "",
   notes: "",
 });
 

@@ -1,7 +1,5 @@
-// Calculator page — multi-year client setup, eligibility-aware entities, billing dashboard.
-
 import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
   Building2,
@@ -9,27 +7,28 @@ import {
   Calculator as CalcIcon,
   DollarSign,
   FileDown,
-  Share2,
   Plus,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { KpiCard } from "@/components/KpiCard";
 import { MultiYearSelect } from "@/components/MultiYearSelect";
 import { EntityCard } from "@/components/calculator/EntityCard";
-import { BillingTable, computeBilled } from "@/components/calculator/BillingTable";
+import { BillingTable } from "@/components/calculator/BillingTable";
 import { useCalculatorStore } from "@/store/calculatorStore";
-import { FILING_STATUSES, type TaxYear } from "@/types/crm";
-import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/utils/format";
+import {
+  calculateSOW,
+  calculateFederal,
+  calculateState,
+  runEngagementCalculation,
+  isEntityComplete,
+} from "@/utils/calculatorEngine";
+
+export { calculateSOW, calculateFederal, calculateState };
 
 export function CalculatorPage() {
   const {
@@ -49,53 +48,66 @@ export function CalculatorPage() {
 
   const [generating, setGenerating] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [sharing, setSharing] = useState(false);
 
-  const filingRate = FILING_STATUSES.find((f) => f.value === client.filingStatus)?.rate ?? 0.21;
+  const completeEntities = useMemo(
+    () => entities.filter(isEntityComplete),
+    [entities],
+  );
+
+  const missingFields = useMemo(() => {
+    if (entities.length === 0) return [] as string[];
+    const FIELD_LABELS: Record<string, string> = {
+      companyName: "Entity Name",
+      state: "State",
+      filingStatus: "Filing Status",
+      customFilingStatus: "Filing Status (Other)",
+      grossRevenue: "Gross Revenue",
+      wagesOfficers: "Wages - Officers",
+      wagesW2: "Wages - W2",
+      contractWages: "Contract Wages",
+      totalSupplies: "Total Supplies",
+    };
+    const missing = new Set<string>();
+    entities.forEach((e) => {
+      if (!e.companyName?.trim()) missing.add(FIELD_LABELS.companyName);
+      if (!e.state) missing.add(FIELD_LABELS.state);
+      if (!e.filingStatus) missing.add(FIELD_LABELS.filingStatus);
+      else if (e.filingStatus === "Other" && !e.customFilingStatus?.trim())
+        missing.add(FIELD_LABELS.customFilingStatus);
+      (["grossRevenue", "wagesOfficers", "wagesW2", "contractWages", "totalSupplies"] as const).forEach(
+        (k) => {
+          const v = e[k];
+          if (v === "" || v === null || v === undefined) missing.add(FIELD_LABELS[k]);
+        },
+      );
+    });
+    return Array.from(missing);
+  }, [entities]);
+
+  const result = useMemo(() => {
+    if (!completeEntities.length) return null;
+    return runEngagementCalculation(completeEntities);
+  }, [completeEntities]);
 
   const totals = useMemo(() => {
-    const billed = computeBilled(entities, filingRate);
-    return billed.reduce(
-      (a, r) => ({ sow: a.sow + r.sow, fed: a.fed + r.fed, total: a.total + r.total }),
-      { sow: 0, fed: 0, total: 0 },
-    );
-  }, [entities, filingRate]);
+    const totalSOW = completeEntities.reduce((sum, e) => sum + calculateSOW(e), 0);
+    // Federal Credit Estimate is the single source of truth.
+    // Federal Total mirrors it (with safe fallback when missing/null/undefined).
+    const federalCreditEstimate = result?.federal ?? 0;
+    const federal = federalCreditEstimate;
+    const stateTotal =
+      result?.stateCredits.reduce((s, sc) => s + sc.stateCreditEstimate, 0) ?? 0;
+    const finalBill = result?.billing?.finalBill ?? 0;
+    return { totalSOW, federalCreditEstimate, federal, stateTotal, finalBill };
+  }, [completeEntities, result]);
 
-  // Honor calculation deep links from the dashboard so the calculator opens with client + year context.
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const q = new URLSearchParams(window.location.search);
     const name = q.get("clientName");
-    const years = q.get("taxYears");
-
     if (name && !client.clientName) setClientField("clientName", name);
-
-    if (years) {
-      const parsed = years
-        .split(",")
-        .map((value) => Number(value))
-        .filter(
-          (value): value is TaxYear => Number.isInteger(value) && value >= 2020 && value <= 2026,
-        )
-        .sort((a, b) => a - b);
-
-      if (parsed.length > 0 && JSON.stringify(parsed) !== JSON.stringify(client.taxYears)) {
-        setClientField("taxYears", parsed);
-      }
-    }
-  }, [client.clientName, client.taxYears, setClientField]);
-
-  const hasExistingCalculationContext =
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("hasExistingCalculation") === "true";
-  const latestCalculationLabel =
-    typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("latestCalculation")
-      : null;
-  const calculationContextMessage =
-    hasExistingCalculationContext && latestCalculationLabel && latestCalculationLabel !== "—"
-      ? `Existing calculation(s) found for ${client.clientName || "this client"}. Latest saved calculation: ${latestCalculationLabel}.`
-      : `No saved calculation found yet. Generate a fresh calculation for ${client.taxYears.length ? client.taxYears.join(", ") : "the selected tax years"}.`;
+  }, [client.clientName, setClientField]);
 
   const yearsLabel =
     client.taxYears.length === 7
@@ -117,42 +129,114 @@ export function CalculatorPage() {
   };
 
   const handleDownload = async () => {
+    const node = document.getElementById("billing-overview-summary");
+    if (!node) {
+      toast.error("Billing Overview Summary not found");
+      return;
+    }
     setDownloading(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setDownloading(false);
-    toast.success("ODF generated", { description: "Billing summary ready for download." });
+    try {
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import("html2canvas-pro"),
+        import("jspdf"),
+      ]);
+
+      const canvas = await html2canvas(node, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        windowWidth: node.scrollWidth,
+      });
+
+      const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 24;
+      const imgWidth = pageWidth - margin * 2;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      const imgData = canvas.toDataURL("image/png");
+
+      if (imgHeight <= pageHeight - margin * 2) {
+        pdf.addImage(imgData, "PNG", margin, margin, imgWidth, imgHeight);
+      } else {
+        // Slice the canvas into page-sized chunks to preserve pagination
+        const pxPerPt = canvas.width / imgWidth;
+        const pageHeightPx = (pageHeight - margin * 2) * pxPerPt;
+        let renderedPx = 0;
+        const pageCanvas = document.createElement("canvas");
+        const ctx = pageCanvas.getContext("2d")!;
+        pageCanvas.width = canvas.width;
+
+        while (renderedPx < canvas.height) {
+          const sliceHeight = Math.min(pageHeightPx, canvas.height - renderedPx);
+          pageCanvas.height = sliceHeight;
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          ctx.drawImage(
+            canvas,
+            0, renderedPx, canvas.width, sliceHeight,
+            0, 0, canvas.width, sliceHeight,
+          );
+          const sliceData = pageCanvas.toDataURL("image/png");
+          const sliceHeightPt = sliceHeight / pxPerPt;
+          if (renderedPx > 0) pdf.addPage();
+          pdf.addImage(sliceData, "PNG", margin, margin, imgWidth, sliceHeightPt);
+          renderedPx += sliceHeight;
+        }
+      }
+
+      const safeName = (client.clientName || "billing-summary").replace(/[^a-z0-9-_]+/gi, "_");
+      pdf.save(`${safeName}-billing-summary.pdf`);
+      toast.success("PDF downloaded");
+    } catch {
+      toast.error("Failed to generate PDF");
+    } finally {
+      setDownloading(false);
+    }
   };
 
-  const handleShare = async () => {
-    setSharing(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setSharing(false);
-    toast.success("Prepared for SharePoint", { description: "Package staged for upload." });
-  };
+  const outOfRange = result?.tier === "Out of Range";
+  const isCustom = result?.tier === "Custom";
+  const federalDisplay = !result || result.federal === 0;
+
+  // Single source of truth for Final Bill display (value + optional message),
+  // shared between Overview KPI and Final Bill section.
+  const finalBill: {
+    value: string | null;
+    message: string | null;
+    tone: "default" | "custom" | "muted";
+  } = (() => {
+    if (!result || federalDisplay || outOfRange) {
+      return { value: null, message: null, tone: "muted" };
+    }
+    if (result.billing) {
+      return { value: formatCurrency(result.billing.finalBill), message: null, tone: "default" };
+    }
+    if (isCustom) {
+      return {
+        value: null,
+        message: "Custom tier — contact the processing team for pricing.",
+        tone: "custom",
+      };
+    }
+    return { value: null, message: null, tone: "muted" };
+  })();
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-cyan">Calculator</p>
-        <h1 className="mt-1 text-3xl font-bold text-navy">Client Setup</h1>
-        <div
-          className={cn(
-            "mt-3 rounded-xl border px-4 py-3 text-sm",
-            hasExistingCalculationContext
-              ? "border-cyan/40 bg-cyan/8 text-cyan-foreground"
-              : "border-amber-200 bg-amber-50 text-amber-950",
-          )}
-        >
-          {calculationContextMessage}
-        </div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-cyan">
+          R&D Tax Credit & Billing
+        </p>
+        <h1 className="mt-1 text-3xl font-bold text-navy">Sales Billing Calculator</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Configure the client, generate entities, and produce a billing-ready summary.
         </p>
       </div>
 
-      {/* Section 1 — Client Information */}
       <Section icon={<Building2 className="h-4 w-4 text-cyan" />} title="Client Information">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <div>
             <Label>Client Name</Label>
             <Input
@@ -171,28 +255,9 @@ export function CalculatorPage() {
               onClear={clearTaxYears}
             />
           </div>
-          <div>
-            <Label>Filing Status</Label>
-            <Select
-              value={client.filingStatus}
-              onValueChange={(v) => setClientField("filingStatus", v as typeof client.filingStatus)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {FILING_STATUSES.map((f) => (
-                  <SelectItem key={f.value} value={f.value}>
-                    {f.label} ({Math.round(f.rate * 100)}%)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
       </Section>
 
-      {/* Section 2 — Generate Entities */}
       <Section icon={<Layers className="h-4 w-4 text-violet" />} title="Generate Entities">
         <div className="flex flex-col gap-3 md:flex-row md:items-end">
           <div className="w-full md:w-48">
@@ -208,24 +273,19 @@ export function CalculatorPage() {
           <Button
             onClick={handleGenerate}
             disabled={generating}
-            className="bg-orange hover:bg-orange/90 text-orange-foreground shadow-elevated"
+            className="bg-orange text-orange-foreground shadow-elevated hover:bg-orange/90"
           >
             <Plus className="mr-1.5 h-4 w-4" />
             {generating ? "Generating..." : "Generate Entities"}
           </Button>
-          <p className="text-xs text-muted-foreground md:ml-3">
-            Enter the total number of entities for this client, then click Generate to create input
-            cards.
-          </p>
         </div>
       </Section>
 
-      {/* Section 3 — Entity Details */}
       <Section
         id="entity-details"
         icon={<CalcIcon className="h-4 w-4 text-orange" />}
         title="Entity Details & Calculations"
-        subtitle="Fill in the highlighted fields for each entity."
+        note={null}
         action={
           entities.length > 0 && (
             <Button variant="outline" onClick={addEntity}>
@@ -236,7 +296,7 @@ export function CalculatorPage() {
       >
         {entities.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-muted/40 p-8 text-center text-sm text-muted-foreground">
-            No entities yet. Use “Generate Entities” above to create input cards.
+            No entities yet. Use "Generate Entities" above to create input cards.
           </div>
         ) : (
           <div className="grid gap-4">
@@ -249,17 +309,20 @@ export function CalculatorPage() {
         )}
       </Section>
 
-      {/* Section 4 — Billing Overview Summary (unified container) */}
-      <Section
-        title="Billing Overview Summary"
-        icon={<DollarSign className="h-4 w-4 text-green" />}
-      >
-        <div className="flex flex-col gap-4 rounded-xl border border-border bg-gradient-frost p-4 lg:flex-row lg:items-start lg:justify-between lg:p-5">
+      <Section id="billing-overview-summary" title="Billing Overview Summary" icon={<DollarSign className="h-4 w-4 text-green" />}>
+        {missingFields.length > 0 && (
+          <div
+            role="alert"
+            className="mb-6 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive"
+          >
+            Missing required fields: {formatList(missingFields)}.
+          </div>
+        )}
+
+        <div id="billing-overview-section" className="flex flex-col gap-6 rounded-xl border border-border bg-gradient-frost p-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-cyan">
-              Overview
-            </p>
-            <h3 className="mt-1 text-lg font-bold text-navy lg:text-xl">
+            <p className="text-xs font-semibold uppercase tracking-widest text-cyan">Overview</p>
+            <h3 className="mt-1 text-xl font-bold text-navy">
               {client.clientName || "Untitled Client"}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -268,106 +331,152 @@ export function CalculatorPage() {
               <span>
                 {entities.length} {entities.length === 1 ? "entity" : "entities"}
               </span>
+              {result?.tier && (
+                <>
+                  <span className="mx-2 opacity-50">·</span>
+                  <Badge variant="secondary">{result.tier}</Badge>
+                </>
+              )}
             </p>
           </div>
-          <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-4">
-            <KpiCard
-              compact
-              label="Total Entities"
-              value={entities.length}
-              icon={Layers}
-              accent="navy"
-            />
-            <KpiCard
-              compact
-              label="Total SOW"
-              value={totals.sow}
-              icon={DollarSign}
-              accent="orange"
-              currency
-            />
-            <KpiCard
-              compact
-              label="Federal Total"
-              value={totals.fed}
-              icon={CalcIcon}
-              accent="cyan"
-              currency
-            />
-            <KpiCard
-              compact
-              label="Grand Total"
-              value={totals.total}
-              icon={DollarSign}
-              accent="green"
-              currency
-            />
+          <div className="grid w-full gap-x-8 gap-y-4 sm:grid-cols-2 lg:w-auto lg:grid-cols-4">
+            {[
+              { label: "Federal Total", value: formatCurrency(totals.federalCreditEstimate), message: null, color: "text-violet" },
+              { label: "State Total", value: formatCurrency(totals.stateTotal), message: null, color: "text-green" },
+              {
+                label: "Final Bill",
+                value: finalBill.value ?? (finalBill.message ? null : formatCurrency(totals.finalBill)),
+                message: finalBill.message,
+                color: "text-orange",
+              },
+            ].map((kpi) => (
+              <div key={kpi.label} className="min-w-0">
+                <p className={`text-xs font-semibold uppercase tracking-wider ${kpi.color}`}>
+                  {kpi.label}
+                </p>
+                {kpi.value && (
+                  <p className={`mt-1 text-2xl font-bold tabular-nums ${kpi.color}`}>
+                    {kpi.value}
+                  </p>
+                )}
+                {kpi.message && (
+                  <p className="mt-1 text-xs text-muted-foreground">{kpi.message}</p>
+                )}
+              </div>
+            ))}
           </div>
+
+
         </div>
+
+        {outOfRange && completeEntities.length > 0 && (
+          <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+            Federal Credit Estimate below $6,000 minimum. Please review inputs.
+          </div>
+        )}
+
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <BillingTable federalEstimate={totals.federalCreditEstimate} finalBill={totals.finalBill} />
+          </div>
+          {result?.phases && result.billing && (
+            <div className="rounded-xl border border-border bg-card p-5 lg:col-span-1">
+              <h3 className="mb-3 text-sm font-semibold text-cyan">Phase Breakdown</h3>
+              <div className="space-y-3">
+                {(
+                  [
+                    ["Phase 1", result.phases.phase1, "text-cyan", "bg-cyan"],
+                    ["Phase 2", result.phases.phase2, "text-green", "bg-green"],
+                    ["Phase 3", result.phases.phase3, "text-violet", "bg-violet"],
+                    ["Phase 4", result.phases.phase4, "text-orange", "bg-orange"],
+                  ] as const
+                ).map(([label, amount, textColor, barColor]) => {
+                  const pct =
+                    result.phases!.total > 0 ? (amount / result.phases!.total) * 100 : 0;
+                  return (
+                    <div key={label}>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className={`font-medium ${textColor}`}>{label}</span>
+                        <span className={`tabular-nums ${textColor}`}>{formatCurrency(amount)}</span>
+                      </div>
+                      <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={`h-full ${barColor}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-sm font-semibold text-navy">
+                <span>Total</span>
+                <span className="tabular-nums">{formatCurrency(result.phases.total)}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
 
         <div className="mt-6">
-          <BillingTable />
+          <h3 className="mb-2 text-sm font-semibold text-navy">Notes</h3>
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Add internal notes here..."
+            rows={4}
+            maxLength={2000}
+            className="w-full"
+          />
         </div>
       </Section>
 
-      {/* Notes */}
-      <Section title="Processing Team Notes">
-        <Textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Add internal processing notes here..."
-          rows={4}
-          maxLength={2000}
-        />
-      </Section>
-
-      {/* Actions */}
       <div className="flex flex-col-reverse items-stretch justify-end gap-3 sm:flex-row">
         <Button
-          variant="outline"
-          onClick={handleShare}
-          disabled={sharing}
-          className="border-cyan text-cyan hover:bg-cyan/10"
-        >
-          <Share2 className="mr-1.5 h-4 w-4" />
-          {sharing ? "Preparing..." : "Prepare for SharePoint"}
-        </Button>
-        <Button
           onClick={handleDownload}
-          disabled={downloading}
-          className="bg-orange hover:bg-orange/90 text-orange-foreground shadow-elevated"
+          disabled={downloading || !result?.billing}
+          className="bg-orange text-orange-foreground shadow-elevated hover:bg-orange/90"
         >
           <FileDown className="mr-1.5 h-4 w-4" />
-          {downloading ? "Generating ODF..." : "Download ODF"}
+          {downloading ? "Preparing..." : "Download PDF"}
         </Button>
       </div>
     </div>
   );
 }
 
+function formatList(items: string[]): string {
+  if (items.length <= 1) return items.join("");
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+}
+
 function Section({
   id,
   icon,
   title,
-  subtitle,
+  note,
   action,
   children,
 }: {
   id?: string;
   icon?: React.ReactNode;
   title: string;
-  subtitle?: string;
+  note?: React.ReactNode;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <section id={id} className="rounded-2xl border border-border bg-card p-6 shadow-card">
-      <header className="mb-5 flex items-center justify-between gap-3">
-        <div>
+      <header className="mb-5 flex items-start justify-between gap-3">
+        <div className="flex flex-col">
           <h2 className="flex items-center gap-2 text-base font-semibold text-navy">
             {icon} {title}
           </h2>
-          {subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>}
+          {note && (
+            <span className="mt-0.5 text-xs text-muted-foreground">{note}</span>
+          )}
         </div>
         {action}
       </header>

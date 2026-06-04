@@ -16,50 +16,49 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { US_STATES, isStateCreditEligible } from "@/constants/states";
+import { US_STATES } from "@/constants/states";
 import type { Entity } from "@/types/crm";
 import { useCalculatorStore } from "@/store/calculatorStore";
-import { toNumber } from "@/utils/format";
 import { cn } from "@/lib/utils";
+import { STATE_DATA, isEntityComplete } from "@/utils/calculatorEngine";
 
 interface Props {
   entity: Entity;
   index: number;
 }
 
-const FINANCIAL_FIELDS: { k: keyof Entity; label: string; suffix?: string }[] = [
-  {
-    k: "grossCredit",
-    label: "Gross Credit Amount",
-    suffix: "(Eligible with more than $6,000 USD)",
-  },
-  { k: "w2Wages", label: "W2 Wages (Qualified Research)" },
-  { k: "contractResearch", label: "Contract Research Payments" },
-  { k: "supplies", label: "Supplies" },
-  { k: "otherQualified", label: "Other Qualified Expenses" },
+const FINANCIAL_FIELDS: { k: keyof Entity; label: string }[] = [
+  { k: "grossRevenue", label: "Gross Revenue" },
+  { k: "wagesOfficers", label: "Officer W2 Wages" },
+  { k: "wagesW2", label: "W2 Wages (Qualified Research)" },
+  { k: "contractWages", label: "Contract Research Payments" },
+  { k: "totalSupplies", label: "Supplies" },
 ];
 
-const GROSS_THRESHOLD = 6000;
+const ENTITY_FILING_OPTIONS = [
+  "C-Corp",
+  "S-Corp",
+  "Partnership",
+  "LLC",
+  "Sole Proprietorship",
+  "Other",
+] as const;
 
 export function EntityCard({ entity, index }: Props) {
   const [open, setOpen] = useState(true);
   const update = useCalculatorStore((s) => s.updateEntity);
   const remove = useCalculatorStore((s) => s.removeEntity);
 
-  const stateEligible = !!entity.state && isStateCreditEligible(entity.state);
-  const grossNumber = toNumber(entity.grossCredit);
-  const grossOk = grossNumber > GROSS_THRESHOLD;
-  const fullyEligible = stateEligible && grossOk;
+  const stateEligible = !!entity.state && entity.state in STATE_DATA;
+  const complete = isEntityComplete(entity);
 
   const eligibilityReason = !entity.state
     ? "Select a state to evaluate eligibility"
-    : !stateEligible && !grossOk
-      ? "State not eligible · Gross Credit below $6,000"
-      : !stateEligible
-        ? "State not eligible"
-        : !grossOk
-          ? "Gross Credit Amount below $6,000"
-          : "";
+    : !stateEligible
+      ? "State not eligible for state credit"
+      : !complete
+        ? "Fill all required fields to confirm eligibility"
+        : "";
 
   return (
     <motion.div
@@ -90,7 +89,7 @@ export function EntityCard({ entity, index }: Props) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {fullyEligible ? (
+          {complete && stateEligible ? (
             <Badge className="bg-green text-green-foreground hover:bg-green">
               <BadgeCheck className="mr-1 h-3 w-3" /> Eligible
             </Badge>
@@ -160,8 +159,8 @@ export function EntityCard({ entity, index }: Props) {
                             </span>
                           </TooltipTrigger>
                           <TooltipContent>
-                            Arizona, California, Georgia, Illinois, Iowa, New Jersey, New York,
-                            North Carolina, Utah.
+                            Arizona, California, Colorado, Georgia, Illinois, Massachusetts, New
+                            Jersey, New York, Utah.
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -178,7 +177,7 @@ export function EntityCard({ entity, index }: Props) {
                           <SelectItem key={s} value={s}>
                             <span className="flex items-center gap-2">
                               {s}
-                              {isStateCreditEligible(s) && (
+                              {s in STATE_DATA && (
                                 <span
                                   title="State Credit Eligible"
                                   className="inline-block h-1.5 w-1.5 rounded-full bg-green"
@@ -195,39 +194,48 @@ export function EntityCard({ entity, index }: Props) {
                       </Badge>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label>Employee Count</Label>
+                  <div>
+                    <Label>Entity Filing Type</Label>
+                    <Select
+                      value={entity.filingStatus}
+                      onValueChange={(v) => update(entity.id, "filingStatus", v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ENTITY_FILING_OPTIONS.map((o) => (
+                          <SelectItem key={o} value={o}>
+                            {o}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {entity.filingStatus === "Other" && (
                       <Input
-                        type="number"
-                        min={0}
-                        value={entity.employeeCount === "" ? "" : entity.employeeCount}
-                        onChange={(e) =>
-                          update(
-                            entity.id,
-                            "employeeCount",
-                            e.target.value === "" ? "" : Number(e.target.value),
-                          )
-                        }
-                        placeholder="0"
+                        className="mt-2"
+                        value={entity.customFilingStatus ?? ""}
+                        onChange={(e) => update(entity.id, "customFilingStatus", e.target.value)}
+                        placeholder="Describe filing type..."
+                        maxLength={80}
                       />
-                    </div>
-                    <div>
-                      <Label>Estimated QRAs</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={entity.estimatedQRAs === "" ? "" : entity.estimatedQRAs}
-                        onChange={(e) =>
-                          update(
-                            entity.id,
-                            "estimatedQRAs",
-                            e.target.value === "" ? "" : Number(e.target.value),
-                          )
-                        }
-                        placeholder="0"
-                      />
-                    </div>
+                    )}
+                  </div>
+                  <div>
+                    <Label>Employee Count</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={entity.employeeCount === "" ? "" : entity.employeeCount}
+                      onChange={(e) =>
+                        update(
+                          entity.id,
+                          "employeeCount",
+                          e.target.value === "" ? "" : Number(e.target.value),
+                        )
+                      }
+                      placeholder="0"
+                    />
                   </div>
                 </div>
               </div>
@@ -238,16 +246,9 @@ export function EntityCard({ entity, index }: Props) {
                   <DollarSign className="h-4 w-4 text-orange" /> Financial Inputs
                 </div>
                 <div className="grid gap-4">
-                  {FINANCIAL_FIELDS.map(({ k, label, suffix }) => (
+                  {FINANCIAL_FIELDS.map(({ k, label }) => (
                     <div key={k}>
-                      <Label className="flex items-baseline gap-2">
-                        <span>{label}</span>
-                        {suffix && (
-                          <span className="text-[11px] font-normal text-muted-foreground">
-                            {suffix}
-                          </span>
-                        )}
-                      </Label>
+                      <Label>{label}</Label>
                       <div className="relative">
                         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                           $
@@ -274,12 +275,12 @@ export function EntityCard({ entity, index }: Props) {
                   <div
                     className={cn(
                       "rounded-lg border p-3 text-sm",
-                      fullyEligible
+                      complete && stateEligible
                         ? "border-green/30 bg-green/5 text-green"
                         : "border-destructive/30 bg-destructive/5 text-destructive",
                     )}
                   >
-                    {fullyEligible ? (
+                    {complete && stateEligible ? (
                       <span className="inline-flex items-center gap-2 font-semibold">
                         <BadgeCheck className="h-4 w-4" /> Eligible for R&amp;D Tax Credit
                       </span>

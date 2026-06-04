@@ -18,6 +18,12 @@ export default defineConfig({
     tsconfigPaths(),
   ],
 
+  server: {
+    host: true,
+    port: 5173,
+    strictPort: false,
+  },
+
   build: {
     outDir: "dist",
     sourcemap: false,
