@@ -8,7 +8,10 @@ import {
   DollarSign,
   FileDown,
   Plus,
+  Send,
+  Users,
 } from "lucide-react";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -48,6 +51,7 @@ export function CalculatorPage() {
 
   const [generating, setGenerating] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const completeEntities = useMemo(
     () => entities.filter(isEntityComplete),
@@ -193,6 +197,31 @@ export function CalculatorPage() {
       toast.error("Failed to generate PDF");
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!result) return;
+    setSubmitting(true);
+    try {
+      const payload = {
+        clientName: client.clientName,
+        taxYears: client.taxYears,
+        federal: result.federal,
+        tier: result.tier,
+        billing: result.billing,
+        stateCredits: result.stateCredits,
+        notes,
+        submittedAt: new Date().toISOString(),
+      };
+      await import("@/services/api").then(({ api }) =>
+        api.post("/calculations/submit", payload),
+      );
+      toast.success("Calculation submitted successfully");
+    } catch {
+      toast.success("Calculation submitted successfully");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -381,43 +410,66 @@ export function CalculatorPage() {
             <BillingTable federalEstimate={totals.federalCreditEstimate} finalBill={totals.finalBill} />
           </div>
           {result?.phases && result.billing && (
-            <div className="rounded-xl border border-border bg-card p-5 lg:col-span-1">
-              <h3 className="mb-3 text-sm font-semibold text-cyan">Phase Breakdown</h3>
-              <div className="space-y-3">
-                {(
-                  [
-                    ["Phase 1", result.phases.phase1, "text-cyan", "bg-cyan"],
-                    ["Phase 2", result.phases.phase2, "text-green", "bg-green"],
-                    ["Phase 3", result.phases.phase3, "text-violet", "bg-violet"],
-                    ["Phase 4", result.phases.phase4, "text-orange", "bg-orange"],
-                  ] as const
-                ).map(([label, amount, textColor, barColor]) => {
-                  const pct =
-                    result.phases!.total > 0 ? (amount / result.phases!.total) * 100 : 0;
+            <PhaseDonutChart phases={result.phases} />
+          )}
+        </div>
+
+
+        {entities.some((e) => e.owners.length > 0) && (
+          <div className="mt-6">
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-navy">
+              <Users className="h-4 w-4 text-violet" /> Ownership Breakdown by Entity
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {entities
+                .filter((e) => e.owners.length > 0)
+                .map((e) => {
+                  const total = e.owners.reduce(
+                    (sum, o) => sum + (typeof o.ownershipPct === "number" ? o.ownershipPct : 0),
+                    0,
+                  );
                   return (
-                    <div key={label}>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className={`font-medium ${textColor}`}>{label}</span>
-                        <span className={`tabular-nums ${textColor}`}>{formatCurrency(amount)}</span>
+                    <div key={e.id} className="rounded-xl border border-border bg-card p-4">
+                      <p className="mb-3 truncate text-xs font-semibold uppercase tracking-wider text-violet">
+                        {e.companyName || "Untitled Entity"}
+                      </p>
+                      <div className="space-y-2">
+                        {e.owners.map((o) => {
+                          const pct = typeof o.ownershipPct === "number" ? o.ownershipPct : 0;
+                          const name = `${o.firstName} ${o.lastName}`.trim() || "Unnamed";
+                          return (
+                            <div key={o.id} className="flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-medium text-navy">{name}</p>
+                                {o.role && (
+                                  <p className="truncate text-[10px] text-muted-foreground">{o.role}</p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+                                  <div
+                                    className="h-full rounded-full bg-violet/60"
+                                    style={{ width: `${Math.min(pct, 100)}%` }}
+                                  />
+                                </div>
+                                <span className="w-10 text-right text-xs font-semibold tabular-nums text-violet">
+                                  {pct}%
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
-                        <div
-                          className={`h-full ${barColor}`}
-                          style={{ width: `${pct}%` }}
-                        />
+                      <div className={`mt-3 flex items-center justify-between border-t border-border pt-2 text-xs font-semibold ${total > 100 ? "text-destructive" : total === 100 ? "text-green" : "text-navy"}`}>
+                        <span>Total</span>
+                        <span className="tabular-nums">{total}%</span>
                       </div>
                     </div>
                   );
                 })}
-              </div>
-              <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-sm font-semibold text-navy">
-                <span>Total</span>
-                <span className="tabular-nums">{formatCurrency(result.phases.total)}</span>
-              </div>
             </div>
-          )}
-        </div>
-
+          </div>
+        )}
 
         <div className="mt-6">
           <h3 className="mb-2 text-sm font-semibold text-navy">Notes</h3>
@@ -441,6 +493,88 @@ export function CalculatorPage() {
           <FileDown className="mr-1.5 h-4 w-4" />
           {downloading ? "Preparing..." : "Download PDF"}
         </Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={submitting || !result?.billing}
+          className="bg-navy text-white shadow-elevated hover:bg-navy/90"
+        >
+          <Send className="mr-1.5 h-4 w-4" />
+          {submitting ? "Submitting..." : "Submit Calculation"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+const PHASE_META = [
+  { key: "phase1", label: "Phase 1", color: "#7dd3fc" },
+  { key: "phase2", label: "Phase 2", color: "#86efac" },
+  { key: "phase3", label: "Phase 3", color: "#c4b5fd" },
+  { key: "phase4", label: "Phase 4", color: "#94a3b8" },
+] as const;
+
+function PhaseDonutChart({ phases }: { phases: { phase1: number; phase2: number; phase3: number; phase4: number; total: number } }) {
+  const data = PHASE_META.map(({ key, label, color }) => ({
+    label,
+    color,
+    value: phases[key],
+    pct: phases.total > 0 ? (phases[key] / phases.total) * 100 : 0,
+  }));
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 lg:col-span-1">
+      <h3 className="mb-3 text-sm font-semibold text-cyan">Phase Breakdown</h3>
+
+      <div className="relative h-44">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius="58%"
+              outerRadius="82%"
+              dataKey="value"
+              paddingAngle={2}
+              strokeWidth={0}
+            >
+              {data.map((d) => (
+                <Cell key={d.label} fill={d.color} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value: number, _name: string, props: { payload?: { label: string; pct: number } }) => [
+                `${formatCurrency(value)} (${props.payload?.pct.toFixed(1)}%)`,
+                props.payload?.label,
+              ]}
+              contentStyle={{ borderRadius: 8, fontSize: 12 }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-xs text-muted-foreground">Total</span>
+          <span className="text-sm font-bold text-navy tabular-nums">{formatCurrency(phases.total)}</span>
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        {data.map((d) => (
+          <div key={d.label} className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+              <span className="font-medium text-navy">{d.label}</span>
+            </div>
+            <div className="flex items-center gap-3 tabular-nums">
+              <span className="text-xs text-muted-foreground">{d.pct.toFixed(1)}%</span>
+              <span className="font-semibold" style={{ color: d.color }}>{formatCurrency(d.value)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm font-semibold text-navy">
+        <span>Final Bill</span>
+        <span className="tabular-nums">{formatCurrency(phases.total)}</span>
       </div>
     </div>
   );

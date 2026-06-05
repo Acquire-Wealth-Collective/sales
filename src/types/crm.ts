@@ -24,6 +24,14 @@ export interface ClientInfo {
   filingStatus: FilingStatus;
 }
 
+export interface EntityOwner {
+  id: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  ownershipPct: number | "";
+}
+
 export interface Entity {
   id: string;
   companyName: string;
@@ -37,6 +45,7 @@ export interface Entity {
   contractWages: number | "";
   totalSupplies: number | "";
   notes: string;
+  owners: EntityOwner[];
 }
 
 // Leads / Pipeline
