@@ -160,17 +160,35 @@ export function getTier(federal: number): string {
 export function getFinalBill(federal: number, tier: string) {
   const rate = TIER_PCT[tier];
   if (rate == null) return null;
-  return { finalBill: federal * rate, billingRate: rate };
+  const computed = federal * rate;
+  // Final bill can never be below $6,000 — floor to a seeded value in [$6,000, $8,000].
+  const finalBill = computed < 6000
+    ? 6000 + seededRand(federal, 77) * 2000
+    : computed;
+  return { finalBill, billingRate: rate };
 }
 
-export function getPhases(finalBill: number) {
-  const phase1 = Math.min(finalBill, 6000);
-  const remaining = Math.max(0, finalBill - 6000);
+function seededRand(seed: number, index: number): number {
+  const x = Math.sin(seed * 9301 + index * 49297 + 233) * 803458.4;
+  return x - Math.floor(x);
+}
+
+export function getPhases(finalBill: number, seed: number = finalBill) {
+  // Generate 4 weights in [0.12, 0.42] so no phase is trivially small or dominant.
+  const raw = [0, 1, 2, 3].map((i) => 0.12 + seededRand(seed, i) * 0.30);
+  const sum = raw.reduce((a, b) => a + b, 0);
+  const [w1, w2, w3, w4] = raw.map((r) => r / sum);
+
+  // Apply $6k floor to phase 1; redistribute any excess proportionally across 2-4.
+  let phase1 = Math.max(6000, finalBill * w1);
+  const remaining = finalBill - phase1;
+  const rSum = w2 + w3 + w4;
+
   return {
     phase1,
-    phase2: remaining / 3,
-    phase3: remaining / 3,
-    phase4: remaining / 3,
+    phase2: remaining * (w2 / rSum),
+    phase3: remaining * (w3 / rSum),
+    phase4: remaining * (w4 / rSum),
     total: finalBill,
   };
 }
@@ -185,6 +203,7 @@ export interface EngagementCalculation {
   stateCredits: Array<{
     entityName: string;
     state: string;
+    federalShare: number;
     creditUtilizationAmount: number;
     stateCreditEstimate: number;
     stateData: { utilizationCap: number; taxRate: number } | null;
@@ -202,13 +221,20 @@ export function runEngagementCalculation(entities: Entity[]): EngagementCalculat
   const { federal } = aggregate;
   const tier = getTier(federal);
   const billing = tier !== "Out of Range" ? getFinalBill(federal, tier) : null;
-  const phases = billing ? getPhases(billing.finalBill) : null;
+  const phases = billing ? getPhases(billing.finalBill, federal) : null;
 
-  const stateCredits = entities.map((e) => ({
-    entityName: e.companyName || `Entity`,
-    state: e.state || "",
-    ...calculateState(e.state, federal),
-  }));
+  const totalSOW = entityFormulasList.reduce((sum, ef) => sum + ef.sowEstimate, 0);
+
+  const stateCredits = entities.map((e, i) => {
+    const entitySOW = entityFormulasList[i].sowEstimate;
+    const federalShare = totalSOW > 0 ? federal * (entitySOW / totalSOW) : 0;
+    return {
+      entityName: e.companyName || `Entity`,
+      state: e.state || "",
+      federalShare,
+      ...calculateState(e.state, federalShare),
+    };
+  });
 
   return {
     entityFormulas: entityFormulasList,

@@ -33,6 +33,7 @@ export interface BilledEntity {
   formula3: number;
   formula50: number;
   sow: number;
+  federalShare: number;
   stateUtil: number;
   stateBill: number;
   stateUtilCap: number | null;
@@ -42,6 +43,7 @@ export interface BilledEntity {
 export function buildEntityRows(entities: Entity[]): BilledEntity[] {
   const complete = entities.filter(isEntityComplete);
   const federal = complete.length ? calculateFederal(complete).federal : 0;
+  const totalSOW = complete.reduce((sum, e) => sum + entityFormulas(e).sowEstimate, 0);
 
   return entities.map((e) => {
     const base = {
@@ -56,6 +58,7 @@ export function buildEntityRows(entities: Entity[]): BilledEntity[] {
         formula3: 0,
         formula50: 0,
         sow: 0,
+        federalShare: 0,
         stateUtil: 0,
         stateBill: 0,
         stateUtilCap: null,
@@ -63,13 +66,15 @@ export function buildEntityRows(entities: Entity[]): BilledEntity[] {
       };
     }
     const f = entityFormulas(e);
-    const st = calculateState(e.state, federal);
+    const federalShare = totalSOW > 0 ? federal * (f.sowEstimate / totalSOW) : 0;
+    const st = calculateState(e.state, federalShare);
     return {
       ...base,
       formula2: f.formula2,
       formula3: f.formula3,
       formula50: f.formula50,
       sow: f.sowEstimate,
+      federalShare,
       stateUtil: st.creditUtilizationAmount,
       stateBill: st.stateCreditEstimate,
       stateUtilCap: st.stateData?.utilizationCap ?? null,
@@ -124,10 +129,11 @@ export function BillingTable({ federalEstimate, finalBill }: { federalEstimate: 
       formula3: acc.formula3 + r.formula3,
       formula50: acc.formula50 + r.formula50,
       sow: acc.sow + r.sow,
+      federalShare: acc.federalShare + r.federalShare,
       stateUtil: acc.stateUtil + r.stateUtil,
       stateBill: acc.stateBill + r.stateBill,
     }),
-    { formula2: 0, formula3: 0, formula50: 0, sow: 0, stateUtil: 0, stateBill: 0 },
+    { formula2: 0, formula3: 0, formula50: 0, sow: 0, federalShare: 0, stateUtil: 0, stateBill: 0 },
   );
 
   const setSort = (k: SortKey) => {
@@ -202,10 +208,10 @@ export function BillingTable({ federalEstimate, finalBill }: { federalEstimate: 
                   <YearChips years={taxYears} />
                 </td>
                 <td className="px-4 py-3 text-center tabular-nums text-violet">
-                  {formatCurrency(federalEstimate)}
+                  {formatCurrency(r.federalShare)}
                 </td>
                 <td className="px-4 py-3 text-center tabular-nums font-semibold text-orange">
-                  {formatCurrency(r.stateBill)}
+                  {r.stateBill > 0 ? formatCurrency(r.stateBill) : <span className="text-muted-foreground text-xs">No state credit</span>}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums font-semibold text-green">
                   {formatCurrency(finalBill)}
@@ -219,7 +225,7 @@ export function BillingTable({ federalEstimate, finalBill }: { federalEstimate: 
                 Totals
               </td>
               <td className="px-4 py-3 text-center tabular-nums text-violet">
-                {formatCurrency(federalEstimate)}
+                {formatCurrency(totals.federalShare)}
               </td>
               <td className="px-4 py-3 text-center tabular-nums text-orange">
                 {formatCurrency(totals.stateBill)}
