@@ -14,7 +14,6 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
-  Eye,
   Calculator,
   FileSignature,
   Pencil,
@@ -435,7 +434,8 @@ function PipelineTable(p: TableProps) {
               layout
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="border-b border-border last:border-0 hover:bg-accent/40 transition-colors"
+              onClick={() => p.onProfile(l)}
+              className="border-b border-border last:border-0 hover:bg-accent/40 transition-colors cursor-pointer"
             >
               <td className="px-5 py-3">
                 <StatusBadge status={l.status} />
@@ -454,7 +454,7 @@ function PipelineTable(p: TableProps) {
                 {l.latestCalculation === "—" ? "—" : formatDate(l.latestCalculation)}
               </td>
               <td className="px-5 py-3 text-muted-foreground">{formatDate(l.addedAt)}</td>
-              <td className="px-5 py-3 text-right">
+              <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -462,9 +462,6 @@ function PipelineTable(p: TableProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => p.onProfile(l)}>
-                      <Eye className="mr-2 h-4 w-4" /> View
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => p.onEdit(l)}>
                       <Pencil className="mr-2 h-4 w-4" /> Edit
                     </DropdownMenuItem>
